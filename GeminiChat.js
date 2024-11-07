@@ -21,16 +21,16 @@ const GeminiChat = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showStopIcon, setShowStopIcon] = useState(false);
 
-  const API_KEY = "";
+  const API_KEY = process.env.GOOGLE_API_KEY; // Set API key securely
 
   useEffect(() => {
     const startChat = async () => {
-      const genAI = new GoogleGenerativeAI.GoogleGenerativeAI(API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const genAI = new GoogleGenerativeAI(API_KEY);
+      const model = genAI.getGenerativeModel('gemini-pro');
       const prompt = "hello! ";
       const result = await model.generateContent(prompt);
       const response = result.response;
-      const text = response.text();
+      const text = response.text; // Access the response text property
       console.log(text);
       showMessage({
         message: "Welcome to Gemini Chat 🤖",
@@ -39,55 +39,59 @@ const GeminiChat = () => {
         icon: "info",
         duration: 2000,
       });
-      setMessages([
-        {
-          text,
-          user: false,
-        },
-      ]);
+      setMessages([{ text, user: false }]);
     };
-    //function call
     startChat();
   }, []);
 
   const sendMessage = async () => {
     setLoading(true);
     const userMessage = { text: userInput, user: true };
-    setMessages([...messages, userMessage]);
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      userMessage,
+    ]);
 
-    const genAI = new GoogleGenerativeAI.GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel('gemini-pro');
     const prompt = userMessage.text;
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const text = response.text();
-    setMessages([...messages, { text, user: false }]);
+    const text = response.text; // Access text directly
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { text, user: false },
+    ]);
     setLoading(false);
     setUserInput("");
 
-    // if (text) {
-    //   Speech.speak(text);
-    // }
     if (text && !isSpeaking) {
-      Speech.speak(text);
+      Speech.speak(text, {
+        onDone: () => {
+          setIsSpeaking(false);
+        },
+      });
       setIsSpeaking(true);
       setShowStopIcon(true);
     }
   };
 
   const toggleSpeech = () => {
-    console.log("isSpeaking", isSpeaking);
     if (isSpeaking) {
       Speech.stop();
       setIsSpeaking(false);
     } else {
-      Speech.speak(messages[messages.length - 1].text);
+      Speech.speak(messages[messages.length - 1].text, {
+        onDone: () => {
+          setIsSpeaking(false);
+        },
+      });
       setIsSpeaking(true);
     }
   };
 
   const ClearMessage = () => {
-    setMessages("");
+    setMessages([]);
     setIsSpeaking(false);
   };
 
@@ -114,20 +118,12 @@ const GeminiChat = () => {
               name="microphone-slash"
               size={24}
               color="white"
-              style={{
-                justifyContent: "center",
-                alignItems: "center",
-              }}
             />
           ) : (
             <FontAwesome
               name="microphone"
               size={24}
               color="white"
-              style={{
-                justifyContent: "center",
-                alignItems: "center",
-              }}
             />
           )}
         </TouchableOpacity>
@@ -139,15 +135,12 @@ const GeminiChat = () => {
           style={styles.input}
           placeholderTextColor="#fff"
         />
-        {
-          //show stop icon only when speaking
-          showStopIcon && (
-            <TouchableOpacity style={styles.stopIcon} onPress={ClearMessage}>
-              <Entypo name="controller-stop" size={24} color="white" />
-            </TouchableOpacity>
-          )
-        }
-        {/* {loading && <ActivityIndicator size="large" color="black" />} */}
+        {showStopIcon && (
+          <TouchableOpacity style={styles.stopIcon} onPress={ClearMessage}>
+            <Entypo name="controller-stop" size={24} color="white" />
+          </TouchableOpacity>
+        )}
+        {loading && <ActivityIndicator size="large" color="black" />}
       </View>
     </View>
   );
